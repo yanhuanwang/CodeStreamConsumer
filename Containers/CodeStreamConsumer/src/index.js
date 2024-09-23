@@ -110,8 +110,12 @@ PASS = fn => d => {
 const STATS_FREQ = 100;
 const URL = process.env.URL || 'http://localhost:8080/';
 var lastFile = null;
+let fileTimers = []; // Stores timers for each file
 
 function maybePrintStatistics(file, cloneDetector, cloneStore) {
+    let timers = Timer.getTimers(file);
+    fileTimers.push(timers); // Store timers for every file
+
     if (0 == cloneDetector.numberOfProcessedFiles % STATS_FREQ) {
         console.log('Processed', cloneDetector.numberOfProcessedFiles, 'files and found', cloneStore.numberOfClones, 'clones.');
         let timers = Timer.getTimers(file);
@@ -162,3 +166,49 @@ function processFile(filename, contents) {
 5. Post-Processing and Filtering: Visualisation of clones and manual analysis to filter out false positives
 6. Aggregation: Clone pairs are aggregated to form clone classes or families, in order to reduce the amount of data and facilitate analysis.
 */
+app.get('/timers', viewTimers);
+function getAverageTimers(files) {
+    let total = files.reduce((acc, timers) => {
+        for (let key in timers) {
+            acc[key] = (acc[key] || 0n) + timers[key];
+        }
+        return acc;
+    }, {});
+
+    let avg = {};
+    let count = BigInt(files.length);
+    for (let key in total) {
+        avg[key] = total[key] / count;
+    }
+
+    return avg;
+}
+
+function viewTimers(req, res, next) {
+    let totalFiles = fileTimers.length;
+    let totalTimes = fileTimers.reduce((acc, timers) => {
+        for (let key in timers) {
+            acc[key] = (acc[key] || 0n) + timers[key];
+        }
+        return acc;
+    }, {});
+
+    let avgTimes = {};
+    for (let key in totalTimes) {
+        avgTimes[key] = totalTimes[key] / BigInt(totalFiles);
+    }
+
+    // Display timers
+    let page = '<HTML><HEAD><TITLE>Timers Statistics</TITLE></HEAD>\n';
+    page += '<BODY><H1>Timers Statistics</H1>\n';
+    page += '<P>Total Files Processed: ' + totalFiles + '</P>\n';
+    page += '<H2>Average Times per File</H2>\n';
+    page += '<ul>';
+    for (let key in avgTimes) {
+        page += `<li>${key}: ${avgTimes[key] / 1000n} µs</li>\n`;
+    }
+    page += '</ul>\n';
+
+    // Optionally, we could add more detailed stats for last 100 or 1000 files
+    res.send(page + '</BODY></HTML>');
+}
