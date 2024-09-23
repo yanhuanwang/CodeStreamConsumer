@@ -1,6 +1,13 @@
 class Clone {
 
     constructor(sourceName, targetName, sourceChunk, targetChunk) {
+        // Ensure both chunks are non-empty
+        if (!sourceChunk || sourceChunk.length === 0) {
+            throw new Error("sourceChunk is empty or undefined");
+        }
+        if (!targetChunk || targetChunk.length === 0) {
+            throw new Error("targetChunk is empty or undefined");
+        }
         this.sourceName = sourceName;
         this.sourceStart = sourceChunk[0].lineNumber;
         this.sourceEnd = sourceChunk[sourceChunk.length -1].lineNumber;
@@ -20,7 +27,12 @@ class Clone {
     }
 
     isNext(clone) {
-        return (this.sourceChunk[this.sourceChunk.length-1].lineNumber == 
+        // Ensure both chunks have enough lines to compare
+        if (this.sourceChunk.length < 1 || clone.sourceChunk.length < 2) {
+            return false; // Cannot compare, so return false
+        }
+
+        return (this.sourceChunk[this.sourceChunk.length-1].lineNumber ==
                 clone.sourceChunk[clone.sourceChunk.length-2].lineNumber);
     }
 

@@ -53,12 +53,16 @@ function listClonesHTML() {
     let output = '';
 
     cloneStore.clones.forEach( clone => {
+        if (!clone || !clone.name) {
+            console.error('Missing clone name:', clone);
+            return;
+        }
         output += '<hr>\n';
         output += '<h2>Source File: ' + clone.sourceName + '</h2>\n';
         output += '<p>Starting at line: ' + clone.sourceStart + ' , ending at line: ' + clone.sourceEnd + '</p>\n';
         output += '<ul>';
         clone.targets.forEach( target => {
-            output += '<li>Found in ' + target.name + ' starting at line ' + target.startLine + '\n';            
+            output += '<li>Found in ' + target.name + ' starting at line ' + target.startLine + '\n';
         });
         output += '</ul>\n'
         output += '<h3>Contents:</h3>\n<pre><code>\n';
