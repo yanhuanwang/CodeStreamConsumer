@@ -14,14 +14,36 @@ const FileStorage = require('./FileStorage');
 // --------------------
 const form = formidable({multiples:false});
 
-app.post('/', fileReceiver );
+app.post('/', fileReceiver);
 function fileReceiver(req, res, next) {
-    form.parse(req, (err, fields, files) => {
-        fs.readFile(files.data.filepath, { encoding: 'utf8' })
-            .then( data => { return processFile(fields.name, data); });
-    });
-    return res.end('');
+  form.parse(req, async (err, fields, files) => {
+    console.log('Fields:', fields);
+    // console.log('Files:', files);
+
+    if (err) {
+      console.error('Error parsing the form:', err);
+      return res.status(400).send('Error parsing the form');
+    }
+
+    const fileKeys = Object.keys(files);
+    if (fileKeys.length === 0) {
+      console.error('No files were uploaded.');
+      return res.status(400).send('No files were uploaded.');
+    }
+
+    const uploadedFile = files[fileKeys[0]];
+
+    try {
+      const data = await fs.readFile(uploadedFile.filepath, { encoding: 'utf8' });
+      await processFile(uploadedFile.originalFilename, data);
+      res.end('File processed successfully');
+    } catch (readError) {
+      console.error('Error reading the uploaded file:', readError);
+      res.status(500).send('Error processing the file');
+    }
+  });
 }
+
 
 app.get('/', viewClones );
 
