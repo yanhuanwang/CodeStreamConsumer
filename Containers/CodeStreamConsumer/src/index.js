@@ -127,6 +127,19 @@ function maybePrintStatistics(file, cloneDetector, cloneStore) {
         console.log('List of found clones available at', URL);
     }
 
+    if (fileTimers.length % BATCH_SIZE === 0) {
+        let lastBatch = fileTimers.slice(-BATCH_SIZE);
+        let avgTimers = getAverageTimers(lastBatch);
+
+        // Store the average of this batch
+        batchAverages.push({
+            batch: batchAverages.length + 1,
+            avgTimers: avgTimers
+        });
+
+        console.log(`Average times for batch ${batchAverages.length}:`, avgTimers);
+    }
+
     return file;
 }
 
@@ -212,3 +225,97 @@ function viewTimers(req, res, next) {
     // Optionally, we could add more detailed stats for last 100 or 1000 files
     res.send(page + '</BODY></HTML>');
 }
+const BATCH_SIZE = 100;
+let batchAverages = []; // Store average times for each batch of 100 files
+// Helper function to convert BigInt to regular Number (or String if you prefer)
+function convertBigIntToNumber(obj) {
+    if (typeof obj === 'bigint') {
+        return Number(obj); // Or you could return obj.toString() if you want to keep full precision
+    } else if (Array.isArray(obj)) {
+        return obj.map(convertBigIntToNumber);
+    } else if (typeof obj === 'object' && obj !== null) {
+        return Object.fromEntries(
+            Object.entries(obj).map(([key, value]) => [key, convertBigIntToNumber(value)])
+        );
+    } else {
+        return obj;
+    }
+}
+
+// Timers endpoint
+app.get('/timers-each', (req, res) => {
+    const convertedData = batchAverages.map(batch => ({
+        ...batch,
+        avgTimers: convertBigIntToNumber(batch.avgTimers)
+    }));
+
+    res.json(convertedData); // Send the converted data as JSON
+});
+
+app.get('/timers-trend', (req, res) => {
+    let page = `
+        <html>
+            <head>
+                <title>Clone Detection - Timer Trends</title>
+                <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+            </head>
+            <body>
+                <h1>Timer Trends</h1>
+                <canvas id="timersChart" width="400" height="200"></canvas>
+                <script>
+                    fetch('/timers-each')
+                        .then(response => response.json())
+                        .then(data => {
+                            const labels = data.map(batch => 'Batch ' + batch.batch);
+                            const matchTimes = data.map(batch => Number(batch.avgTimers.match) / 1000); // convert nanoseconds to microseconds
+                            const totalTimes = data.map(batch => Number(batch.avgTimers.total) / 1000); // convert nanoseconds to microseconds
+
+                            const ctx = document.getElementById('timersChart').getContext('2d');
+                            const timersChart = new Chart(ctx, {
+                                type: 'line',
+                                data: {
+                                    labels: labels,
+                                    datasets: [
+                                        {
+                                            label: 'Match Time (µs)',
+                                            data: matchTimes,
+                                            borderColor: 'rgba(75, 192, 192, 1)',
+                                            borderWidth: 1,
+                                            fill: false
+                                        },
+                                        {
+                                            label: 'Total Time (µs)',
+                                            data: totalTimes,
+                                            borderColor: 'rgba(153, 102, 255, 1)',
+                                            borderWidth: 1,
+                                            fill: false
+                                        }
+                                    ]
+                                },
+                                options: {
+                                    scales: {
+                                        y: {
+                                            beginAtZero: true,
+                                            title: {
+                                                display: true,
+                                                text: 'Time (µs)'
+                                            }
+                                        },
+                                        x: {
+                                            title: {
+                                                display: true,
+                                                text: 'Batch'
+                                            }
+                                        }
+                                    }
+                                }
+                            });
+                        })
+                        .catch(error => console.error('Error fetching timers data:', error));
+                </script>
+            </body>
+        </html>
+    `;
+
+    res.send(page);
+});
