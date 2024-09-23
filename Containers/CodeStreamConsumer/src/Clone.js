@@ -23,6 +23,10 @@ class Clone {
     }
 
     addTarget(clone) {
+        // Check if clone and its targets exist
+        if (!clone || !clone.targets) {
+            return; // Skip if clone or targets are missing
+        }
         this.targets = this.targets.concat(clone.targets);
     }
 
