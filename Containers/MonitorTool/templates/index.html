@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MongoDB Monitor</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Document Counts</h1>
+
+    <h2>Files</h2>
+    <canvas id="filesChart" width="400" height="200"></canvas>
+
+    <h2>Chunks</h2>
+    <canvas id="chunksChart" width="400" height="200"></canvas>
+
+    <h2>Candidates</h2>
+    <canvas id="candidatesChart" width="400" height="200"></canvas>
+
+    <h2>Clones</h2>
+    <canvas id="clonesChart" width="400" height="200"></canvas>
+
+    <script>
+        const labels = []; // Will be populated with timestamps
+
+        // Create datasets for each chart
+        const filesData = {
+            labels: labels,
+            datasets: [{
+                label: 'Files',
+                data: [],
+                borderColor: 'rgba(75, 192, 192, 1)',
+                fill: false
+            }]
+        };
+
+        const chunksData = {
+            labels: labels,
+            datasets: [{
+                label: 'Chunks',
+                data: [],
+                borderColor: 'rgba(255, 99, 132, 1)',
+                fill: false
+            }]
+        };
+
+        const candidatesData = {
+            labels: labels,
+            datasets: [{
+                label: 'Candidates',
+                data: [],
+                borderColor: 'rgba(54, 162, 235, 1)',
+                fill: false
+            }]
+        };
+
+        const clonesData = {
+            labels: labels,
+            datasets: [{
+                label: 'Clones',
+                data: [],
+                borderColor: 'rgba(255, 206, 86, 1)',
+                fill: false
+            }]
+        };
+
+        // Initialize charts
+        const filesChart = new Chart(document.getElementById('filesChart').getContext('2d'), {
+            type: 'line',
+            data: filesData,
+            options: {
+                responsive: true,
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Time'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Counts'
+                        }
+                    }
+                }
+            }
+        });
+
+        const chunksChart = new Chart(document.getElementById('chunksChart').getContext('2d'), {
+            type: 'line',
+            data: chunksData,
+            options: {
+                responsive: true,
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Time'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Counts'
+                        }
+                    }
+                }
+            }
+        });
+
+        const candidatesChart = new Chart(document.getElementById('candidatesChart').getContext('2d'), {
+            type: 'line',
+            data: candidatesData,
+            options: {
+                responsive: true,
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Time'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Counts'
+                        }
+                    }
+                }
+            }
+        });
+
+        const clonesChart = new Chart(document.getElementById('clonesChart').getContext('2d'), {
+            type: 'line',
+            data: clonesData,
+            options: {
+                responsive: true,
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Time'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Counts'
+                        }
+                    }
+                }
+            }
+        });
+
+        function fetchData() {
+            fetch('/data')
+                .then(response => response.json())
+                .then(counts => {
+                    // Add the latest timestamp and counts to each chart
+                    labels.push(counts.timestamp);
+                    filesData.datasets[0].data.push(counts.files);
+                    chunksData.datasets[0].data.push(counts.chunks);
+                    candidatesData.datasets[0].data.push(counts.candidates);
+                    clonesData.datasets[0].data.push(counts.clones);
+
+                    // Update each chart
+                    filesChart.update();
+                    chunksChart.update();
+                    candidatesChart.update();
+                    clonesChart.update();
+                });
+        }
+
+        setInterval(fetchData, 10000); // Fetch data every 10 seconds
+    </script>
+</body>
+</html>
