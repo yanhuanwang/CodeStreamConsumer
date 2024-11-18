@@ -1,23 +1,17 @@
 from flask import Flask, jsonify, render_template
 from pymongo import MongoClient
+from bson import ObjectId
+import os
 import time
 
 app = Flask(__name__)
-client = MongoClient('mongodb://localhost:27017/')  # Adjust if using Docker
+client = MongoClient(os.getenv('MONGO_URI', 'mongodb://dbstorage:27017/'))  # Uses environment variable or defaults to localhost
 db = client['cloneDetector']
-
-# Initialize historical data storage
-historical_data = {
-    'timestamps': [],
-    'files': [],
-    'chunks': [],
-    'candidates': [],
-    'clones': []
-}
 
 @app.route('/')
 def index():
     return render_template('index.html')
+
 
 @app.route('/data')
 def data():
@@ -30,18 +24,25 @@ def data():
         'clones': db['clones'].count_documents({})
     }
 
-    # Append counts to historical data
-    historical_data['timestamps'].append(current_time)
-    historical_data['files'].append(counts['files'])
-    historical_data['chunks'].append(counts['chunks'])
-    historical_data['candidates'].append(counts['candidates'])
-    historical_data['clones'].append(counts['clones'])
+    # Persist counts to historical data collection
+    result = db['historical_counts'].insert_one(counts)
+    counts['_id'] = str(result.inserted_id)  # Convert ObjectId to string
 
     return jsonify(counts)
 
 @app.route('/historical-data')
 def historical():
+    historical_data = list(db['historical_counts'].find({}, {"_id": 1, "timestamp": 1, "files": 1, "chunks": 1, "candidates": 1, "clones": 1}))
+    for record in historical_data:
+        if '_id' in record:
+            record['_id'] = str(record['_id'])  # Convert ObjectId to string
+
     return jsonify(historical_data)
 
+@app.route('/health')
+def health():
+    return "ok", 200
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0')
+

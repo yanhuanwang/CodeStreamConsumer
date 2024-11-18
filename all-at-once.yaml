@@ -31,10 +31,12 @@ services:
 
   MonitorTool:
     image: monitortool
+    ports:
+      - 5000:5000
     depends_on:
       - dbstorage
     environment:
-      - DBHOST=mongo
+      - DBHOST=dbstorage
 
 volumes:
   dbstorage:
